@@ -22,6 +22,7 @@
 #include "GeometricTools.h"
 
 #include <iostream>
+#include "glog/logging.h"
 
 namespace ORB_SLAM3
 {
@@ -390,7 +391,22 @@ Eigen::Matrix3f Preintegrated::GetDeltaRotation(const Bias &b_)
     std::unique_lock<std::mutex> lock(mMutex);
     // 计算偏置的变化量
     Eigen::Vector3f dbg;
+    if (std::isnan(b_.bwx) || std::isnan(b_.bwy) || std::isnan(b_.bwz)) {
+        LOG(INFO) << "the b_ is nan"<< std::endl;
+    }
+    if (std::isnan(b.bwx) || std::isnan(b.bwy) || std::isnan(b.bwz)) {
+        LOG(INFO) << "the b is nan"<< std::endl;
+    }
     dbg << b_.bwx - b.bwx, b_.bwy - b.bwy, b_.bwz - b.bwz;
+    if (std::isnan(dbg(0)) || std::isnan(dbg(1)) || std::isnan(dbg(2))) {
+        dbg.setZero();
+        LOG(INFO) << "the dbg is nan"<< std::endl;
+    }
+    if (std::isnan(JRg(0, 0)) || std::isnan(JRg(0, 1)) || std::isnan(JRg(0, 2)) || std::isnan(JRg(1, 0)) || std::isnan(JRg(1, 1)) || std::isnan(JRg(1, 2)) || std::isnan(JRg(2, 0)) || std::isnan(JRg(2, 1)) || std::isnan(JRg(2, 2))) {
+        JRg.setIdentity();
+        LOG(INFO) << "the JRg is nan"<< std::endl;
+    }
+
     // 考虑偏置后，dR对偏置线性化的近似求解,邱笑晨《预积分总结与公式推导》P13～P14
     // Forster论文公式（44）yP17也有结果（但没有推导），后面两个函数GetDeltaPosition和GetDeltaPosition也是基于此推导的
     return NormalizeRotation(dR * Sophus::SO3f::exp(JRg * dbg).matrix());

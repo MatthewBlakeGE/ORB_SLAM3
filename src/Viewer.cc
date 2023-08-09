@@ -21,6 +21,7 @@
 #include <pangolin/pangolin.h>
 
 #include <mutex>
+#include "glog/logging.h"
 
 namespace ORB_SLAM3
 {
@@ -187,8 +188,9 @@ void Viewer::Run()
     pangolin::Var<bool> menuStop("menu.Stop",false,false);
     pangolin::Var<bool> menuStepByStep("menu.Step By Step",false,true);  // false, true
     pangolin::Var<bool> menuStep("menu.Step",false,false);
-
     pangolin::Var<bool> menuShowOptLba("menu.Show LBA opt", false, true);
+    pangolin::Var<bool> menuSavePointCloud("menu.Save The PointCloud", false, true);
+
     // Define Camera Render Object (for view / scene browsing)
     pangolin::OpenGlRenderState s_cam(
                 pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,1000),
@@ -217,8 +219,9 @@ void Viewer::Run()
     }
 
     float trackedImageScale = mpTracker->GetImageScale();
+    LOG(INFO) << "trackedImageScale: " << trackedImageScale << endl;
 
-    cout << "Starting the Viewer" << endl;
+    LOG(INFO) << "Starting the Viewer" << endl;
     while(1)
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -227,12 +230,14 @@ void Viewer::Run()
 
         if(mbStopTrack)
         {
+            LOG(INFO) << "Stop tracking" << endl;
             menuStepByStep = true;
             mbStopTrack = false;
         }
 
         if(menuFollowCamera && bFollow)
         {
+            LOG(INFO) << "Follow camera" << endl;
             if(bCameraView)
                 s_cam.Follow(Twc);
             else
@@ -242,12 +247,14 @@ void Viewer::Run()
         {
             if(bCameraView)
             {
+                LOG(INFO) << "Follow camera" << endl;
                 s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,1000));
                 s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,0.0,-1.0, 0.0));
                 s_cam.Follow(Twc);
             }
             else
             {
+                LOG(INFO) << "Follow camera2" << endl;
                 s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,3000,3000,512,389,0.1,1000));
                 s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(0,0.01,10, 0,0,0,0.0,0.0, 1.0));
                 s_cam.Follow(Ow);
@@ -256,11 +263,13 @@ void Viewer::Run()
         }
         else if(!menuFollowCamera && bFollow)
         {
+            LOG(INFO) << "Unfollow camera" << endl;
             bFollow = false;
         }
 
         if(menuCamView)
         {
+            LOG(INFO) << "Camera view" << endl;
             menuCamView = false;
             bCameraView = true;
             s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,10000));
@@ -270,6 +279,7 @@ void Viewer::Run()
 
         if(menuTopView && mpMapDrawer->mpAtlas->isImuInitialized())
         {
+            LOG(INFO) << "Top view" << endl;
             menuTopView = false;
             bCameraView = false;
             s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,3000,3000,512,389,0.1,10000));
@@ -279,6 +289,7 @@ void Viewer::Run()
 
         if(menuLocalizationMode && !bLocalizationMode)
         {
+            LOG(INFO) << "Localization mode" << endl;
             mpSystem->ActivateLocalizationMode();
             bLocalizationMode = true;
         }
@@ -290,7 +301,7 @@ void Viewer::Run()
 
         if(menuStepByStep && !bStepByStep)
         {
-            //cout << "Viewer: step by step" << endl;
+            LOG(INFO) << "Step by step mode" << endl;
             mpTracker->SetStepByStep(true);
             bStepByStep = true;
         }
@@ -306,6 +317,13 @@ void Viewer::Run()
             menuStep = false;
         }
 
+        if(menuSavePointCloud)
+        {
+            LOG(INFO) << "Save point cloud" << endl;
+            mpTracker->mpPointCloudMapping->save();
+            menuSavePointCloud = false;
+        }
+
 
         d_cam.Activate(s_cam);
         glClearColor(1.0f,1.0f,1.0f,1.0f);
@@ -316,20 +334,26 @@ void Viewer::Run()
             mpMapDrawer->DrawMapPoints();
 
         pangolin::FinishFrame();
-
+//        LOG(INFO) << "Finish frame" << endl;
         cv::Mat toShow;
         cv::Mat im = mpFrameDrawer->DrawFrame(trackedImageScale);
-
+//        LOG(INFO) << "Draw frame" << endl;
         if(both){
+            LOG(INFO) << "Draw right frame" << endl;
             cv::Mat imRight = mpFrameDrawer->DrawRightFrame(trackedImageScale);
             cv::hconcat(im,imRight,toShow);
         }
         else{
+//            toShow = im;
+//            LOG(INFO) << "Draw left frame" << endl;
+//            LOG(INFO) << "im size: " << im.size() << endl;
+//            LOG(INFO) << "toShow size: " << toShow.size() << endl;
             toShow = im;
         }
 
         if(mImageViewerScale != 1.f)
         {
+            LOG(INFO) << "Resize frame" << endl;
             int width = toShow.cols * mImageViewerScale;
             int height = toShow.rows * mImageViewerScale;
             cv::resize(toShow, toShow, cv::Size(width, height));
@@ -337,9 +361,12 @@ void Viewer::Run()
 
         cv::imshow("ORB-SLAM3: Current Frame",toShow);
         cv::waitKey(mT);
+//        LOG(INFO) << "Wait key" << endl;
+
 
         if(menuReset)
         {
+            LOG(INFO) << "Reset" << endl;
             menuShowGraph = true;
             menuShowInertialGraph = true;
             menuShowKeyFrames = true;
@@ -356,6 +383,7 @@ void Viewer::Run()
 
         if(menuStop)
         {
+            LOG(INFO) << "Stop" << endl;
             if(bLocalizationMode)
                 mpSystem->DeactivateLocalizationMode();
 
@@ -370,6 +398,7 @@ void Viewer::Run()
 
         if(Stop())
         {
+            LOG(INFO) << "Stop" << endl;
             while(isStopped())
             {
                 usleep(3000);
@@ -377,7 +406,10 @@ void Viewer::Run()
         }
 
         if(CheckFinish())
+        {
+            LOG(INFO) << "Finish" << endl;
             break;
+        }
     }
 
     SetFinish();

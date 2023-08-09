@@ -4,7 +4,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 rosbuild_init()
 
 IF(NOT ROS_BUILD_TYPE)
-  SET(ROS_BUILD_TYPE Release)
+  SET(ROS_BUILD_TYPE Debug)
 ENDIF()
 
 MESSAGE("Build type: " ${ROS_BUILD_TYPE})
@@ -14,12 +14,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=native")
 
 # Check C++11 or C++0x support
 include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
 if(COMPILER_SUPPORTS_CXX11)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
    add_definitions(-DCOMPILEDWITHC11)
-   message(STATUS "Using flag -std=c++11.")
+   message(STATUS "Using flag -std=c++14.")
 elseif(COMPILER_SUPPORTS_CXX0X)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
    add_definitions(-DCOMPILEDWITHC0X)
@@ -37,6 +37,7 @@ find_package(OpenCV 3.2)
       message(FATAL_ERROR "OpenCV > 3.2 not found.")
    endif()
 
+find_package(PCL 1.8.1 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 
@@ -46,27 +47,33 @@ ${PROJECT_SOURCE_DIR}/../../../
 ${PROJECT_SOURCE_DIR}/../../../include
 ${PROJECT_SOURCE_DIR}/../../../include/CameraModels
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/Sophus
+${EIGEN3_INCLUDE_DIR}
+${PCL_INCLUDE_DIRS}
 ${Pangolin_INCLUDE_DIRS}
+        /usr/include/glog
 )
 
 set(LIBS 
-${OpenCV_LIBS} 
+${OpenCV_LIBS}
+${PCL_LIBRARIES}
 ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
 ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM3.so
+        /usr/lib/x86_64-linux-gnu/libglog.so
 -lboost_system
 )
 
-# Node for monocular camera
-rosbuild_add_executable(Mono
-src/ros_mono.cc
-)
 
-target_link_libraries(Mono
-${LIBS}
-)
+# Node for monocular camera
+#rosbuild_add_executable(Mono
+#src/ros_mono.cc
+#)
+#
+#target_link_libraries(Mono
+#${LIBS} gflags
+#)
 
 # Node for monocular camera (Augmented Reality Demo)
 # 由于里面代码没有将cv::mat 改成 SOPUS的暂时注释掉，不然会报错
@@ -81,13 +88,13 @@ ${LIBS}
 # )
 
 # Node for stereo camera
-rosbuild_add_executable(Stereo
-src/ros_stereo.cc
-)
-
-target_link_libraries(Stereo
-${LIBS}
-)
+#rosbuild_add_executable(Stereo
+#src/ros_stereo.cc
+#)
+#
+#target_link_libraries(Stereo
+#${LIBS}
+#)
 
 # Node for RGB-D camera
 rosbuild_add_executable(RGBD
@@ -95,23 +102,32 @@ src/ros_rgbd.cc
 )
 
 target_link_libraries(RGBD
-${LIBS}
+${LIBS} gflags
+)
+
+# Node for RGBD and inertial camera
+rosbuild_add_executable(RGBD_inertial
+src/ros_rgbd_inertial.cc
+)
+
+target_link_libraries(RGBD_inertial
+${LIBS} gflags
 )
 
 # Node for monocular-inertial camera
-rosbuild_add_executable(Mono_Inertial
-src/ros_mono_inertial.cc
-)
-
-target_link_libraries(Mono_Inertial
-${LIBS}
-)
-
-# Node for stereo-inertial camera
-rosbuild_add_executable(Stereo_Inertial
-src/ros_stereo_inertial.cc
-)
-
-target_link_libraries(Stereo_Inertial
-${LIBS}
-)
+#rosbuild_add_executable(Mono_Inertial
+#src/ros_mono_inertial.cc
+#)
+#
+#target_link_libraries(Mono_Inertial
+#${LIBS}
+#)
+#
+## Node for stereo-inertial camera
+#rosbuild_add_executable(Stereo_Inertial
+#src/ros_stereo_inertial.cc
+#)
+#
+#target_link_libraries(Stereo_Inertial
+#${LIBS}
+#)

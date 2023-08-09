@@ -31,6 +31,7 @@
 #include<opencv2/core/core.hpp>
 
 #include"../../../include/System.h"
+#include "glog/logging.h"
 
 using namespace std;
 
@@ -66,8 +67,9 @@ int main(int argc, char **argv)
     // message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 100);
     // message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 100);
     // 以下为tum rgbd 数据集的topic
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_color", 100);
-    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth/image", 100);
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/color/image_raw", 100);
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/aligned_depth_to_color/image_raw", 100);
+//    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/aligned_depth_to_color/image_raw", 100);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));
@@ -109,7 +111,14 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    mpSLAM->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec());
+//    LOG(INFO) << "rgb_size " << cv_ptrRGB->image.size() << "depth_size " << cv_ptrD->image.size();
+
+    cv::Mat rgb;
+    cv::Mat depth;
+    cv::resize(cv_ptrRGB->image,rgb,cv::Size(1280,720));
+    cv::resize(cv_ptrD->image,depth,cv::Size(1280,720));
+
+    mpSLAM->TrackRGBD(rgb,depth,cv_ptrRGB->header.stamp.toSec());
 }
 
 
